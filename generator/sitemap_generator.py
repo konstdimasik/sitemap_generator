@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from generator.drawing_graph import draw
-from generator.xml_creater import creating_sitemap, pretty_print_xml
+from generator.xml_creater import create_sitemap, pretty_print_xml
 from loguru import logger
 
 logger.add(
@@ -47,8 +47,8 @@ class Crawler:
         parsed = urlparse(url)
         return bool(parsed.netloc) and bool(parsed.scheme)
 
-    def get_responce(self, url: str) -> "requests.models.Response":
-        return requests.get(url)
+    def get_responce_text(self, url: str) -> str:
+        return requests.get(url).text
 
     def run(self) -> None:
         while self.new_urls:
@@ -68,13 +68,15 @@ class Crawler:
         url_parsed = urlparse(url)
         base = url_parsed.netloc
         root_scheme = url_parsed.scheme
-        response = self.get_responce(url)
-        soup = BeautifulSoup(response.text, "lxml")
+        response = self.get_responce_text(url)
+        print(type(response))
+        soup = BeautifulSoup(response, "lxml")
         for a_tag in soup.find_all("a"):
             link = a_tag.get("href")
             if link and link.startswith("/"):
                 link = urljoin(url, link)
             if not self.is_valid(link):
+                logger.warning(f"Failed: {url}")
                 continue
             tmp_link = urlparse(link)
             link = tmp_link._replace(
@@ -84,10 +86,8 @@ class Crawler:
                 fragment='',
             ).geturl()
             if link in self.local_urls or link == url:
-                # already in the set
                 continue
             if base not in link:
-                # external link
                 if link not in self.external_urls:
                     self.external_urls.append(link)
                 continue
@@ -108,7 +108,7 @@ def main(args: List[str] = sys.argv):
     local_urls_graph = crawler.get_graph()
 
     domain_name = urlparse(url).netloc
-    creating_sitemap(local_urls, domain_name, processing_time)
+    create_sitemap(local_urls, domain_name, processing_time)
     pretty_print_xml(f"./ready_sitemaps/sitemap_{domain_name}.xml")
 
     draw(local_urls_graph, domain_name)

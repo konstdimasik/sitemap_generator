@@ -8,7 +8,7 @@ from urllib.parse import urljoin, urlparse
 import aiohttp
 from bs4 import BeautifulSoup
 from generator.drawing_graph import draw
-from generator.xml_creater import creating_sitemap, pretty_print_xml
+from generator.xml_creater import create_sitemap, pretty_print_xml
 from loguru import logger
 
 logger.add(
@@ -112,7 +112,7 @@ def main(args: List[str] = sys.argv):
     local_urls_graph = crawler.get_graph()
 
     domain_name = f"{urlparse(url).netloc}_async"
-    creating_sitemap(local_urls, domain_name, processing_time)
+    create_sitemap(local_urls, domain_name, processing_time)
     pretty_print_xml(f"./ready_sitemaps/sitemap_{domain_name}.xml")
 
     draw(local_urls_graph, domain_name)

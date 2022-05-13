@@ -69,7 +69,6 @@ class Crawler:
         base = url_parsed.netloc
         root_scheme = url_parsed.scheme
         response = self.get_responce_text(url)
-        print(type(response))
         soup = BeautifulSoup(response, "lxml")
         for a_tag in soup.find_all("a"):
             link = a_tag.get("href")

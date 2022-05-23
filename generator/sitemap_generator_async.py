@@ -52,6 +52,18 @@ class Crawler:
         async with session.get(url) as response:
             return await response.text()
 
+    def normalize_link(self, link: str, url: str, url_scheme: str) -> str:
+        if link and link.startswith("/"):
+            link = urljoin(url, link)
+        tmp_link = urlparse(link)
+        link = tmp_link._replace(
+            scheme=url_scheme,
+            params='',
+            query='',
+            fragment='',
+        ).geturl()
+        return link
+
     async def run(self) -> None:
         async with aiohttp.ClientSession() as session:
             while self.new_urls:
@@ -71,27 +83,17 @@ class Crawler:
         self.graph[url] = []
         url_parsed = urlparse(url)
         base = url_parsed.netloc
-        root_scheme = url_parsed.scheme
+        url_scheme = url_parsed.scheme
         response = await self.get_responce(session, url)
         soup = BeautifulSoup(response, "lxml")
         for a_tag in soup.find_all("a"):
             link = a_tag.get("href")
-            if link and link.startswith("/"):
-                link = urljoin(url, link)
+            link = self.normalize_link(link, url, url_scheme)
             if not self.is_valid(link):
                 continue
-            tmp_link = urlparse(link)
-            link = tmp_link._replace(
-                scheme=root_scheme,
-                params='',
-                query='',
-                fragment='',
-            ).geturl()
             if link in self.local_urls or link == url:
-                # already in the set
                 continue
             if base not in link:
-                # external link
                 if link not in self.external_urls:
                     self.external_urls.append(link)
                 continue

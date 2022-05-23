@@ -50,6 +50,18 @@ class Crawler:
     def get_responce_text(self, url: str) -> str:
         return requests.get(url).text
 
+    def normalize_link(self, link: str, url: str, url_scheme: str) -> str:
+        if link and link.startswith("/"):
+            link = urljoin(url, link)
+        tmp_link = urlparse(link)
+        link = tmp_link._replace(
+            scheme=url_scheme,
+            params='',
+            query='',
+            fragment='',
+        ).geturl()
+        return link
+
     def run(self) -> None:
         while self.new_urls:
             url = self.new_urls.pop(0)
@@ -67,24 +79,14 @@ class Crawler:
         self.graph[url] = []
         url_parsed = urlparse(url)
         base = url_parsed.netloc
-        root_scheme = url_parsed.scheme
+        url_scheme = url_parsed.scheme
         response = self.get_responce_text(url)
-        print(type(response))
         soup = BeautifulSoup(response, "lxml")
         for a_tag in soup.find_all("a"):
             link = a_tag.get("href")
-            if link and link.startswith("/"):
-                link = urljoin(url, link)
+            link = self.normalize_link(link, url, url_scheme)
             if not self.is_valid(link):
-                logger.warning(f"Failed: {url}")
                 continue
-            tmp_link = urlparse(link)
-            link = tmp_link._replace(
-                scheme=root_scheme,
-                params='',
-                query='',
-                fragment='',
-            ).geturl()
             if link in self.local_urls or link == url:
                 continue
             if base not in link:
